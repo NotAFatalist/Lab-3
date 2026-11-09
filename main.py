@@ -9,8 +9,9 @@
   * кнопки «Сгенерировать», «Копировать», включение музыки и выход.
 
 Допзадание: музыка Silksong OST «Bilewater» (assets/theme.wav — mp3 сконвертирован
-в WAV, потому что winsound умеет только WAV) и анимация — летящие искры,
-бегущая развёртка, пульсирующая рамка ключа и «печать» ключа по символам.
+в WAV, потому что winsound умеет только WAV) и анимация — «печать» ключа по символам.
+Оформление минимальное: на фоне только арт из assets/background.png, без искр,
+бегущих линий и прочего декора.
 
 Логика генерации вынесена в keygen.py; если картинки или музыки не окажется,
 make_assets.py нарисует и синтезирует запасные.
@@ -18,9 +19,7 @@ make_assets.py нарисует и синтезирует запасные.
 
 from __future__ import annotations
 
-import math                      # sin() — плавная пульсация рамки ключа
 import os                       # склейка путей к папке assets
-import random                   # случайные координаты искр
 import tkinter as tk            # сама графика: окно, виджеты, canvas
 from tkinter import messagebox  # предупреждение, если не найден фон
 
@@ -45,9 +44,7 @@ GOLD = "#f2c14e"        # золотой акцент (ключ, кнопка г
 CRIMSON = "#e0405f"     # красный акцент (логотип, ошибки)
 TEAL = "#7ee0d0"        # бирюзовый (успешные сообщения)
 
-GLOW_FROM = (26, 32, 54)    # тёмный цвет рамки ключа в начале пульсации
-GLOW_TO = (70, 26, 44)      # бордовый цвет рамки ключа в пике пульсации
-GLOW_DARK = "#1b2338"       # статичный цвет рамки до первого кадра анимации
+GLOW_DARK = "#1b2338"       # обычный цвет рамки поля ключа
 GLOW_BRIGHT = "#461a2c"     # цвет рамки поля ввода при фокусе
 
 FONT_TITLE = ("Georgia", 30, "bold")     # логотип SILKSONG
@@ -56,17 +53,6 @@ FONT_INPUT = ("Consolas", 22)            # поле ввода числа
 FONT_KEY = ("Consolas", 25, "bold")      # поле сгенерированного ключа
 FONT_BUTTON = ("Consolas", 11, "bold")   # кнопки
 FONT_STATUS = ("Consolas", 10)           # строка состояния
-
-
-def mix(first: tuple[int, int, int], second: tuple[int, int, int], ratio: float) -> str:
-    """Смешивает два цвета (0.0 — первый, 1.0 — второй) в строку #rrggbb.
-
-    Нужна для пульсации: рамка плавно переходит из тёмного цвета в бордовый.
-    """
-    ratio = min(1.0, max(0.0, ratio))           # ограничиваем коэффициент 0…1
-    return "#%02x%02x%02x" % tuple(             # собираем hex-строку цвета
-        int(first[i] + (second[i] - first[i]) * ratio) for i in range(3)
-    )
 
 
 class KeygenApp:
@@ -82,17 +68,12 @@ class KeygenApp:
         # --- состояние приложения ---
         self.full_key = ""                  # готовый ключ целиком
         self.revealed = 0                   # сколько символов уже «напечатано»
-        self.phase = 0.0                    # фаза пульсации рамки
-        self.scan_y = 0.0                   # текущая высота бегущей развёртки
         self.music_on = False               # играет ли музыка сейчас
-        self.particles: list[list] = []     # список искр: [id на canvas, скорость]
 
         # --- сборка интерфейса (порядок важен: canvas ниже, панель выше) ---
-        self._build_canvas()                # фон, картинка, линия-развёртка
+        self._build_canvas()                # только фон-картинка
         self._build_panel()                 # панель с полями и кнопками
-        self._build_particles()             # искры поверх фона
         self._bind_events()                 # горячие клавиши и фильтр ввода
-        self._animate()                     # запуск анимации (сама себя повторяет)
 
     # --- оформление ------------------------------------------------------------
     def _build_canvas(self) -> None:
@@ -114,11 +95,6 @@ class KeygenApp:
                 "Файл assets/background.png не найден.\n"
                 "Запустите: python make_assets.py",
             )
-
-        # бегущая линия-развёртка: тонкая, полупрозрачная за счёт штриховки
-        self.scanline = self.canvas.create_line(
-            0, 0, WIDTH, 0, fill="#3c4a70", width=1, stipple="gray12"
-        )
 
     def _build_panel(self) -> None:
         """Создаёт панель с заголовком, полями ввода и кнопками."""
@@ -219,21 +195,6 @@ class KeygenApp:
         button.bind("<Leave>", lambda _event: button.configure(bg="#1b2236"))
         return button
 
-    def _build_particles(self) -> None:
-        """Создаёт искры — маленькие овалы, которые будут подниматься вверх."""
-        random.seed(10)                                 # фиксированный набор искр
-        palette = (TEAL, GOLD, "#9a8cc0", "#ffffff")    # цвета искр
-        for _ in range(70):                             # всего 70 штук
-            x = random.uniform(0, WIDTH)                # случайная точка по ширине
-            y = random.uniform(0, HEIGHT)               # и по высоте
-            radius = random.choice((1, 1, 2))           # размер: чаще 1 px
-            item = self.canvas.create_oval(
-                x, y, x + radius, y + radius,
-                fill=random.choice(palette), outline="",
-            )
-            # сохраняем id и скорость подъёма (отрицательная — вверх)
-            self.particles.append([item, random.uniform(-0.9, -0.25)])
-
     def _bind_events(self) -> None:
         """Подключает фильтр ввода и горячие клавиши."""
         self.digits_var.trace_add("write", self._filter_input)      # фильтр цифр
@@ -329,35 +290,6 @@ class KeygenApp:
             self.music_button.configure(text="♪ ВЫКЛ")
             self.status.configure(fg=TEAL)
             self.status_var.set("♪ Silksong — Bilewater (зациклено)")
-
-    # --- анимация --------------------------------------------------------------
-    def _animate(self) -> None:
-        """Один кадр анимации: искры, пульсация рамки и бегущая развёртка.
-
-        Метод вызывает сам себя через root.after(33, ...) — так окно остаётся
-        отзывчивым (в отличие от time.sleep, который заморозил бы интерфейс).
-        """
-        self.phase += 0.08                          # продвигаем фазу пульсации
-
-        # --- искры ---
-        for particle in self.particles:
-            item, speed = particle                  # id на canvas и скорость
-            self.canvas.move(item, 0, speed)        # сдвигаем вверх на speed px
-            x1, y1, _, _ = self.canvas.coords(item)
-            if y1 < -4:                             # улетела за верхний край
-                # переносим вниз, в случайную точку — искра «рождается» заново
-                self.canvas.coords(item, random.uniform(0, WIDTH), HEIGHT + 4,
-                                   random.uniform(0, WIDTH) + 2, HEIGHT + 5)
-
-        # --- пульсация рамки поля ключа ---
-        glow = (math.sin(self.phase) + 1) / 2       # синус 0…1 — плавное мерцание
-        self.key_frame.configure(highlightbackground=mix(GLOW_FROM, GLOW_TO, glow))
-
-        # --- бегущая линия-развёртка ---
-        self.scan_y = (self.scan_y + 2.4) % HEIGHT  # сдвиг вниз по кругу
-        self.canvas.coords(self.scanline, 0, self.scan_y, WIDTH, self.scan_y)
-
-        self.root.after(33, self._animate)          # следующий кадр через 33 мс
 
 
 def main() -> int:
