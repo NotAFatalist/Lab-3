@@ -13,8 +13,8 @@
 Оформление минимальное: на фоне только арт из assets/background.png, без искр,
 бегущих линий и прочего декора.
 
-Логика генерации вынесена в keygen.py; если картинки или музыки не окажется,
-make_assets.py нарисует и синтезирует запасные.
+Логика генерации вынесена в keygen.py, чтобы её можно было проверить отдельно
+(запуск без окна: python keygen.py 726911).
 """
 
 from __future__ import annotations
@@ -93,7 +93,7 @@ class KeygenApp:
             messagebox.showwarning(
                 "Нет фона",
                 "Файл assets/background.png не найден.\n"
-                "Запустите: python make_assets.py",
+                "Положите картинку в папку assets рядом с main.py.",
             )
 
     def _build_panel(self) -> None:
@@ -271,7 +271,7 @@ class KeygenApp:
 
         if not os.path.exists(MUSIC):               # файла нет — подсказываем, что делать
             self.status.configure(fg=CRIMSON)
-            self.status_var.set("Нет файла assets/theme.wav — запустите make_assets.py")
+            self.status_var.set("Нет файла assets/theme.wav — музыка недоступна")
             return
 
         if self.music_on:                           # музыка играет — выключаем
