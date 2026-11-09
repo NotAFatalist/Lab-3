@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Сборка ресурсов для keygen'а: фон и 8-битная музыка.
+"""Сборка запасных ресурсов для keygen'а: фон и 8-битная музыка.
 
-Запускается один раз (или после изменения оформления)::
+Основные файлы в assets/ — свои: background.png (арт) и theme.wav (трек Silksong
+«Bilewater», mp3 перекодирован в WAV, потому что winsound умеет только WAV).
+Этот скрипт рисует/синтезирует ЗАПАСНЫЕ файлы, если основных почему-то нет::
 
-    python make_assets.py
+    python make_assets.py           # создаст только отсутствующие fallback-файлы
+    python make_assets.py --force   # перезаписать fallback-файлы
 
 Создаёт:
-    assets/background.png  — тематический фон в стиле фанатского арта по Silksong;
-    assets/theme.wav       — зацикленная 8-битная мелодия.
+    assets/background_generated.png  — нарисованный программно фон 960×540;
+    assets/theme_generated.wav       — зацикленная 8-битная мелодия.
 
-Картинка рисуется программно (Pillow), поэтому в репозитории нет чужих
-изображений с неизвестной лицензией. Для работы нужен только Pillow;
-сам keygen (main.py) обходится стандартной библиотекой — готовые файлы
-из assets/ уже лежат в репозитории.
+Пользовательские background.png и theme.wav скрипт никогда не перезаписывает.
+Для работы нужен Pillow; сам keygen (main.py) обходится стандартной библиотекой.
 """
 
 from __future__ import annotations
@@ -21,12 +22,13 @@ from __future__ import annotations
 import math
 import os
 import random
+import sys
 import wave
 from array import array
 
 from PIL import Image, ImageDraw, ImageFilter
 
-WIDTH, HEIGHT = 900, 560
+WIDTH, HEIGHT = 960, 540
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, "assets")
 
@@ -221,15 +223,25 @@ def write_music(path: str) -> None:
 
 
 def main() -> int:
+    force = "--force" in sys.argv[1:]
     os.makedirs(ASSETS, exist_ok=True)
-    background = os.path.join(ASSETS, "background.png")
-    music = os.path.join(ASSETS, "theme.wav")
 
-    build_background().save(background, "PNG", optimize=True)
-    print("создан", background, os.path.getsize(background), "байт")
+    background = os.path.join(ASSETS, "background_generated.png")
+    music = os.path.join(ASSETS, "theme_generated.wav")
 
-    write_music(music)
-    print("создан", music, os.path.getsize(music), "байт")
+    if force or not os.path.exists(background):
+        build_background().save(background, "PNG", optimize=True)
+        print("создан", background, os.path.getsize(background), "байт")
+    else:
+        print("уже есть, пропускаю:", background)
+
+    if force or not os.path.exists(music):
+        write_music(music)
+        print("создан", music, os.path.getsize(music), "байт")
+    else:
+        print("уже есть, пропускаю:", music)
+
+    print("основные assets/background.png и assets/theme.wav скрипт не трогает")
     return 0
 
 

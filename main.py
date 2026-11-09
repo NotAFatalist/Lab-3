@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 """Keygen по мотивам Hollow Knight: Silksong — лабораторная работа №3, вариант 10.
 
-Интерфейс (tkinter):
-  * фоновая картинка-арт (assets/background.png);
+Интерфейс (tkinter), окно 960×540:
+  * фоновая картинка-арт (assets/background.png, 16:9);
   * поле ввода 6-значного DEC-числа (вводная часть ключа);
   * поле сгенерированного ключа формата XXXXX-XXXXX XXXX;
   * кнопки «Сгенерировать», «Копировать», включение музыки и выход.
 
-Допзадание: 8-битная музыка (assets/theme.wav, воспроизводится через winsound)
-и анимация — летящие искры, бегущая развёртка, пульсирующая рамка ключа
-и «печать» ключа по символам.
+Допзадание: музыка Silksong OST «Bilewater» (assets/theme.wav — mp3 сконвертирован
+в WAV, потому что winsound умеет только WAV) и анимация — летящие искры,
+бегущая развёртка, пульсирующая рамка ключа и «печать» ключа по символам.
 
-Логика генерации вынесена в keygen.py, оформление собирается make_assets.py.
+Логика генерации вынесена в keygen.py, запасное оформление собирается make_assets.py.
 """
 
 from __future__ import annotations
@@ -27,10 +27,22 @@ from keygen import KeyFormatError, GeneratedKey, generate_key
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, "assets")
-BACKGROUND = os.path.join(ASSETS, "background.png")
-MUSIC = os.path.join(ASSETS, "theme.wav")
 
-WIDTH, HEIGHT = 900, 560
+WIDTH, HEIGHT = 960, 540
+
+
+def find_asset(*names: str) -> str | None:
+    """Возвращает путь к первому существующему файлу из папки assets/.
+
+    Порядок важен: сначала пользовательский файл, затем запасной,
+    сгенерированный скриптом make_assets.py.
+    """
+    for name in names:
+        path = os.path.join(ASSETS, name)
+        if os.path.exists(path):
+            return path
+    return None
+
 
 DARK = "#070910"
 PANEL = "#0b101c"
@@ -92,14 +104,16 @@ class KeygenApp:
         )
         self.canvas.pack(fill="both", expand=True)
 
-        if os.path.exists(BACKGROUND):
-            self.background = tk.PhotoImage(file=BACKGROUND)
+        background_path = find_asset("background.png", "background_generated.png")
+        if background_path:
+            self.background = tk.PhotoImage(file=background_path)
             self.canvas.create_image(0, 0, image=self.background, anchor="nw")
         else:
             self.background = None
             messagebox.showwarning(
                 "Нет фона",
-                "Файл assets/background.png не найден.\nЗапустите: python make_assets.py",
+                "Файлы assets/background.png и background_generated.png не найдены.\n"
+                "Запустите: python make_assets.py",
             )
 
         self.scanline = self.canvas.create_line(
@@ -107,9 +121,11 @@ class KeygenApp:
         )
 
     def _build_panel(self) -> None:
+        # рамка в тон арту: панель тёмная, фон за ней — тёмно-бордовый арт,
+        # поэтому край панели отделяем линией (иначе интерфейс «сливается» с фоном)
         self.panel = tk.Frame(
             self.canvas, bg=PANEL, bd=0,
-            highlightthickness=1, highlightbackground="#233049",
+            highlightthickness=2, highlightbackground="#6b5426",
         )
         self.canvas.create_window(
             WIDTH // 2, HEIGHT // 2, window=self.panel, width=660, height=430
@@ -263,7 +279,8 @@ class KeygenApp:
             self.status_var.set("winsound доступен только в Windows.")
             return
 
-        if not os.path.exists(MUSIC):
+        music_path = find_asset("theme.wav", "theme_generated.wav")
+        if not music_path:
             self.status.configure(fg=CRIMSON)
             self.status_var.set("Нет файла assets/theme.wav — запустите make_assets.py")
             return
@@ -272,13 +289,17 @@ class KeygenApp:
             winsound.PlaySound(None, winsound.SND_PURGE)
             self.music_on = False
             self.music_button.configure(text="♪ ВКЛ")
+            self.status.configure(fg=MUTED)
+            self.status_var.set("Музыка выключена")
         else:
             winsound.PlaySound(
-                MUSIC,
+                music_path,
                 winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_LOOP,
             )
             self.music_on = True
             self.music_button.configure(text="♪ ВЫКЛ")
+            self.status.configure(fg=TEAL)
+            self.status_var.set("♪ Silksong — Bilewater (зациклено)")
 
     # --- анимация --------------------------------------------------------------
     def _animate(self) -> None:
