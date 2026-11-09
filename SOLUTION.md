@@ -25,8 +25,7 @@
 |---|---|
 | `main.py` | GUI на tkinter (окно 960×540): фон-арт, поле ввода, поле ключа, кнопки, анимация, музыка |
 | `keygen.py` | чистая логика генерации (`generate_key`), валидация ввода, не зависит от tkinter |
-| `make_background.py` | подготовка фона: ресайз арта под окно и мягкое затемнение под панелью |
-| `make_assets.py` | запасные ресурсы, если основных нет: `background_generated.png` и `theme_generated.wav` (8-бит) |
+| `make_assets.py` | запасные ресурсы: перерисует `background.png` и синтезирует 8-битную `theme.wav`, если их нет |
 | `tests/test_keygen.py` | 10 юнит-тестов на формат ключа и правило суммы |
 | `docs/screenshot.png` | как выглядит окно |
 
@@ -34,11 +33,8 @@
 
 | Файл | Что это |
 |---|---|
-| `new-bg.webp` | исходный арт 1200×675 (загружен пользователем) |
-| `background.png` | фон окна 960×540: арт, подогнанный по размеру и затемнённый в центре под панель |
+| `background.png` | фон окна 960×540 — тематический арт |
 | `theme.wav` | музыка Silksong OST «Bilewater» (2:17), mp3 → WAV 44.1 кГц, моно, 16 бит |
-| `background_generated.png` | запасной фон, нарисованный программно |
-| `theme_generated.wav` | запасная 8-битная мелодия, синтезированная программно |
 
 Почему музыка в WAV: `winsound` воспроизводит **только WAV** (mp3 он не умеет).
 Поэтому трек один раз перекодирован:
@@ -78,11 +74,9 @@ ffmpeg -i "21. Bilewater.mp3" -vn -map 0:a:0 -ac 1 -ar 44100 -c:a pcm_s16le asse
 python main.py                     # запуск генератора
 python keygen.py 726911            # проверка логики без GUI
 python -m unittest discover tests  # тесты
-python make_background.py          # пересобрать фон из assets/new-bg.webp (нужен Pillow)
-python make_assets.py              # запасные фон и музыка (нужен Pillow)
+python make_assets.py              # запасные фон и музыка, если файлов нет (нужен Pillow)
 ```
 
 Готовые `assets/*` уже лежат в репозитории, поэтому для запуска `main.py`
 достаточно стандартной библиотеки Python с tkinter. Pillow нужен только
-для скриптов подготовки оформления, а ffmpeg — только если перекодировать
-новый трек из mp3.
+для `make_assets.py`, а ffmpeg — только если перекодировать новый трек из mp3.

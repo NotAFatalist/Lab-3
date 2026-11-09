@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Сборка запасных ресурсов для keygen'а: фон и 8-битная музыка.
+"""Запасные ресурсы для keygen'а: фон и 8-битная музыка.
 
-Основные файлы в assets/ — свои: background.png (арт) и theme.wav (трек Silksong
-«Bilewater», mp3 перекодирован в WAV, потому что winsound умеет только WAV).
-Этот скрипт рисует/синтезирует ЗАПАСНЫЕ файлы, если основных почему-то нет::
+В assets/ лежат основные файлы: background.png (арт 960×540) и theme.wav
+(трек Silksong «Bilewater», mp3 перекодирован в WAV — winsound умеет только WAV).
+Этот скрипт нужен, только если этих файлов почему-то нет::
 
-    python make_assets.py           # создаст только отсутствующие fallback-файлы
-    python make_assets.py --force   # перезаписать fallback-файлы
+    python make_assets.py           # создаст недостающие background.png / theme.wav
+    python make_assets.py --force   # перерисовать и перезаписать их
 
-Создаёт:
-    assets/background_generated.png  — нарисованный программно фон 960×540;
-    assets/theme_generated.wav       — зацикленная 8-битная мелодия.
-
-Пользовательские background.png и theme.wav скрипт никогда не перезаписывает.
+Существующие файлы без --force скрипт не трогает.
 Для работы нужен Pillow; сам keygen (main.py) обходится стандартной библиотекой.
 """
 
@@ -226,22 +222,21 @@ def main() -> int:
     force = "--force" in sys.argv[1:]
     os.makedirs(ASSETS, exist_ok=True)
 
-    background = os.path.join(ASSETS, "background_generated.png")
-    music = os.path.join(ASSETS, "theme_generated.wav")
+    background = os.path.join(ASSETS, "background.png")
+    music = os.path.join(ASSETS, "theme.wav")
 
     if force or not os.path.exists(background):
         build_background().save(background, "PNG", optimize=True)
         print("создан", background, os.path.getsize(background), "байт")
     else:
-        print("уже есть, пропускаю:", background)
+        print("уже есть, пропускаю (--force перезапишет):", background)
 
     if force or not os.path.exists(music):
         write_music(music)
         print("создан", music, os.path.getsize(music), "байт")
     else:
-        print("уже есть, пропускаю:", music)
+        print("уже есть, пропускаю (--force перезапишет):", music)
 
-    print("основные assets/background.png и assets/theme.wav скрипт не трогает")
     return 0
 
 

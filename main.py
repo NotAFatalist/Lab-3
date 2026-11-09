@@ -12,8 +12,8 @@
 в WAV, потому что winsound умеет только WAV) и анимация — летящие искры,
 бегущая развёртка, пульсирующая рамка ключа и «печать» ключа по символам.
 
-Логика генерации вынесена в keygen.py, запасное оформление собирается make_assets.py,
-а фон из своего арта готовит make_background.py.
+Логика генерации вынесена в keygen.py; если картинки или музыки не окажется,
+make_assets.py нарисует и синтезирует запасные.
 """
 
 from __future__ import annotations
@@ -29,20 +29,10 @@ from keygen import KeyFormatError, GeneratedKey, generate_key   # чистая �
 HERE = os.path.dirname(os.path.abspath(__file__))   # папка, где лежит main.py
 ASSETS = os.path.join(HERE, "assets")               # папка с картинкой и музыкой
 
+BACKGROUND = os.path.join(ASSETS, "background.png")  # фон окна (960×540)
+MUSIC = os.path.join(ASSETS, "theme.wav")            # музыка (только WAV)
+
 WIDTH, HEIGHT = 960, 540        # размер окна (тот же, что у фона)
-
-
-def find_asset(*names: str) -> str | None:
-    """Возвращает путь к первому существующему файлу из папки assets/.
-
-    Порядок важен: сначала пользовательский файл, затем запасной,
-    сгенерированный скриптом make_assets.py.
-    """
-    for name in names:                          # перебираем имена по порядку
-        path = os.path.join(ASSETS, name)       # полный путь к кандидату
-        if os.path.exists(path):                # файл есть — возвращаем его
-            return path
-    return None                                 # ничего не нашлось
 
 
 # --- палитра интерфейса --------------------------------------------------------
@@ -112,17 +102,16 @@ class KeygenApp:
         )
         self.canvas.pack(fill="both", expand=True)      # растягиваем на всё окно
 
-        # фон: сначала свой арт, если его нет — запасной, сгенерированный скриптом
-        background_path = find_asset("background.png", "background_generated.png")
-        if background_path:
+        # фон окна — арт из assets/background.png
+        if os.path.exists(BACKGROUND):
             # ссылку на PhotoImage храним в self, иначе сборщик мусора её удалит
-            self.background = tk.PhotoImage(file=background_path)
+            self.background = tk.PhotoImage(file=BACKGROUND)
             self.canvas.create_image(0, 0, image=self.background, anchor="nw")
         else:
             self.background = None                      # картинки нет — работаем без неё
             messagebox.showwarning(
                 "Нет фона",
-                "Файлы assets/background.png и background_generated.png не найдены.\n"
+                "Файл assets/background.png не найден.\n"
                 "Запустите: python make_assets.py",
             )
 
@@ -319,8 +308,7 @@ class KeygenApp:
             self.status_var.set("winsound доступен только в Windows.")
             return
 
-        music_path = find_asset("theme.wav", "theme_generated.wav")
-        if not music_path:                          # файла нет — подсказываем, что делать
+        if not os.path.exists(MUSIC):               # файла нет — подсказываем, что делать
             self.status.configure(fg=CRIMSON)
             self.status_var.set("Нет файла assets/theme.wav — запустите make_assets.py")
             return
@@ -333,7 +321,7 @@ class KeygenApp:
             self.status_var.set("Музыка выключена")
         else:                                       # музыки нет — включаем
             winsound.PlaySound(
-                music_path,
+                MUSIC,
                 # SND_ASYNC — не блокировать программу, SND_LOOP — повторять трек
                 winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_LOOP,
             )
